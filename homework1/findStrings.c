@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 //may need stdlib.h
 
 //sizeof gives the number of bytes of a type. strlen gives the length of the string
@@ -23,10 +24,10 @@ int findString(FILE* fp, char* iString) {
 
 	int i = 0;
 	while(fBuff[i] != '\0') {
-		if(fBuff[i] == iString[0]) {
+		if(tolower(fBuff[i]) == tolower(iString[0])) {
 			int j = 1;
 			for(; j < strlen(iString); ++j) {
-				if(fBuff[i + j] != iString[j]) {
+				if(tolower(fBuff[i + j]) != tolower(iString[j])) {
 					copy = 0;
 					break;
 				}
