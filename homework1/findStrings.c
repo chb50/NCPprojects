@@ -4,6 +4,8 @@
 #include <ctype.h>
 //may need stdlib.h
 
+#define BYTES_TO_READ 1000
+
 //sizeof gives the number of bytes of a type. strlen gives the length of the string
 
 int findString(FILE* fp, char* iString) {
@@ -11,16 +13,16 @@ int findString(FILE* fp, char* iString) {
 	int copy = 1; //flag that states if we found a copy
 	int copyCount = 0;
 
-	char fBuff[1000];
+	char fBuff[BYTES_TO_READ];
 
 	fBuff[sizeof(fBuff) - 1] = 0; //the terminating char
 	int elemRead = fread(fBuff, 1, sizeof(fBuff), fp);
 	fBuff[elemRead] = 0; //assign terminating char where last char has been read
 
-	printf("File Contents:\n");
-	printf("%s\n", fBuff);
+	// printf("File Contents:\n");
+	// printf("%s\n", fBuff);
 
-	printf("%i\n", (int)strlen(iString));
+	//printf("%i\n", (int)strlen(iString));
 
 	int i = 0;
 	while(fBuff[i] != '\0') {
@@ -49,12 +51,9 @@ int main(int argc, char* argv[]) {
 	int i = 0;
 	for(; i < strlen(n); ++i) { // the -1 accounts for terminating char, which i want to move
 		fn[i] = argv[1][i];
-		printf("%c\n", fn[i]);
 	}
 
 	fn[strlen(n)] = '.', fn[strlen(n) + 1] = 'c', fn[strlen(n) + 2] = '\0'; //add extention
-
-	printf("%s\n", fn);
 
 	FILE* fp = fopen(fn, "r");
 
@@ -67,7 +66,8 @@ int main(int argc, char* argv[]) {
 	i = 0;
 	for(;i < argc-2; ++i) {
 		countArray[i] = findString(fp, argv[i+2]); //remember, first arguement is executable file name, the second is the file we are reading
-		printf("The count for string %s is %i.\n", argv[i+2], countArray[i]);
+		//printf("The count for string %s is %i.\n", argv[i+2], countArray[i]);
+		printf("%i\n", countArray[i]);
 		rewind(fp); //set pointer back to beginning of file
 	}
 
