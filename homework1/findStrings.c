@@ -22,14 +22,15 @@ int findString(FILE* fp, char* iString) {
 		exit(1);
 	}
 	fseek(fp, 0, SEEK_SET); //set pointer back to begining of file
-	char* fBuff = malloc(sizeof(size));
-	int elemRead = fread(fBuff, 1, sizeof(fBuff), fp);
+	char* fBuff = malloc(size);
+	int elemRead = fread(fBuff, 1, size, fp);
 	fBuff[elemRead] = 0; //assign terminating char where last char has been read
 
+	printf("size file is %i\n", size);
 
 
 	// printf("File Contents:\n");
-	// printf("%s\n", fBuff);
+	//printf("%s\n", fBuff);
 
 	//printf("%i\n", (int)strlen(iString));
 
@@ -48,6 +49,7 @@ int findString(FILE* fp, char* iString) {
 			}
 		}
 		i++;
+		copy = 1;
 	}
 
 	free(fBuff);
