@@ -4,20 +4,29 @@
 #include <ctype.h>
 //may need stdlib.h
 
-#define BYTES_TO_READ 1000
+#define FILE_SIZE 10485764 //10MB + 4 Bytes for padding
 
 //sizeof gives the number of bytes of a type. strlen gives the length of the string
 
+//can try reading the file into a buff of size 1, char by char
 int findString(FILE* fp, char* iString) {
 
 	int copy = 1; //flag that states if we found a copy
 	int copyCount = 0;
 
-	char fBuff[BYTES_TO_READ];
-
-	fBuff[sizeof(fBuff) - 1] = 0; //the terminating char
+	//finds size of file
+	fseek(fp, 0, SEEK_END); //set pointer to end of file
+	int size = ftell(fp); //get file size
+	if(size > FILE_SIZE) {
+		perror("file too large");
+		exit(1);
+	}
+	fseek(fp, 0, SEEK_SET); //set pointer back to begining of file
+	char* fBuff = malloc(sizeof(size));
 	int elemRead = fread(fBuff, 1, sizeof(fBuff), fp);
 	fBuff[elemRead] = 0; //assign terminating char where last char has been read
+
+
 
 	// printf("File Contents:\n");
 	// printf("%s\n", fBuff);
@@ -40,6 +49,8 @@ int findString(FILE* fp, char* iString) {
 		}
 		i++;
 	}
+
+	free(fBuff);
 
 	return copyCount;
 	//if elemRead is less than the acutal number of elements in the file, then we have a problem
