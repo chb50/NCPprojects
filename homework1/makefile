@@ -1,2 +1,2 @@
-po5: findStrings.c
-	gcc -o po5 findStrings.c
+p05: p05.c
+	gcc -o p05 p05.c
