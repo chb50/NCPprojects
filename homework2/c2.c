@@ -1,3 +1,12 @@
+/* state of this project:
+
+got 200 for www.gnu.org
+got 200 for www.ucla.org
+got 200 for www.ucsb.org
+
+*/
+
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <strings.h>
