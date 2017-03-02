@@ -48,7 +48,7 @@ int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost,
     struct addrinfo hints;
 	struct addrinfo *res;
 
-	bzero(&hints, sizeof(&hints));
+	memset(&hints, 0, sizeof hints);
 
 	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
 	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
@@ -73,8 +73,6 @@ int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost,
     for(p = res;p != NULL; p = p->ai_next) {
         void *addr;
         char *ipver;
-
-        printf("test\n");
 
         // get the pointer to the address itself,
         // different fields in IPv4 and IPv6:
@@ -103,9 +101,66 @@ int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost,
     return sprintf(logstring, "%s: %d.%d.%d.%d %s", time_str, a, b, c, d, uri);
 }
 
+//function that handles client requests
+void clientReq(char* uri, char* url, FILE* logfd, int cfd) {
+	int port = 80; //user defines ports
+
+	int fd = Open_clientfd(url, port); //must now send the get request. write to this file descriptor
+	int reqLen = 10000;
+	char req[reqLen];
+
+	//char* lhost = "127.0.0.1";
+
+	sprintf(req, "GET %s HTTP/1.1\r\nHost: %s:80\r\n\r\n", uri, url);
+
+	printf("%s\n", req);
+
+	int nw = 0;
+
+	if ((nw = write(fd, req, reqLen)) < 0) {
+		
+		err_exit();
+	}
 
 
+	/* READING NEEDS TO HAPPEN ON THE SERVER */
+
+	char recvline[MAXLINE + 1];
+	int nr = 0;
+
+	int rnr = 0;
+
+	while ((nr = read(fd, recvline, MAXLINE)) > 0) {
+		recvline[nr] = '\0';	/* null terminate */
+		if (fputs(recvline, stdout) == EOF) {
+			printf("error at line: %i\n", __LINE__);
+			err_exit();
+		}
+		if (( rnr = fwrite(recvline, 1, MAXLINE, logfd)) < 0) {
+			err_exit();
+		}
+		if(send(cfd, recvline, nr+1, MSG_NOSIGNAL) < 0) {
+			err_exit();
+		}
+	}
+	if (nr < 0) {
+		printf("error at line: %i\n", __LINE__);
+		err_exit();
+	}
+	
+	return;
+}
+
+
+//function for server requests
 void reqHandle(int cfd, struct sockaddr_in *addr) {
+
+	char* logFile = "proxy.log"; //stores http info to be passed to web
+
+	FILE* fp = fopen(logFile, "r+");
+	if(fp == NULL)
+		err_exit();
+
 	//read request
 
 	char reqbuf[10000];
@@ -127,7 +182,7 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 	//dont know length of pathname, need to parse based on a delimiter, in this case " "
 	char* s = reqbuf;
 	char* command = strtok_r(reqbuf, " ", &s); //first time we call, we get "GET"
-	char* url = strtok_r(NULL, " ", &s); //modified &s to point to second token, which is the pathname
+	char* uri = strtok_r(NULL, " ", &s); //modified &s to point to second token, which is the pathname
 
 	//chech protocol and version
 
@@ -135,34 +190,39 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 
 	strtok_r(NULL, " ", &s); //skip "Host:" portion of string
 
-	char* host = strtok_r(NULL, ":", &s); //get ip address
+	char* url = strtok_r(NULL, ":", &s); //get ip address
 
 	char* port = strtok_r(NULL, "\r\n", &s);
 
-	printf("%s %s %s %s %s\n", command, url, proto, host, port);
+	printf("%s %s %s %s %s\n", command, uri, proto, url, port);
 	
 	//write request
 
+	clientReq(uri, url, fp, cfd);
+
 	//open file
 
-	char* logFile = "proxy.log";
-
-	FILE* fp = fopen(logFile, "r+");
-	if(fp == NULL)
-		err_exit();
 	//read content
 
 	char buf[10000];
-	int logSize = format_log_entry(buf, addr, host, url, 0);
-	printf("logSize: %i\n", logSize);
+	int logSize = format_log_entry(buf, addr, url, uri, 0);
 
 	//the lone carrage return indicates the end of the meta data
 
-	//write header
-	int bytesw = 0;
-	if((bytesw = fwrite(buf, 1, logSize, fp)) < 0) {
-		err_exit();
-	}
+	// //write the file recieved to the web client
+	// int logLen = 0;
+	// rewind(fp);
+	// fseek(fp, 0L, SEEK_END);
+	// logLen = ftell(fp);
+	// rewind(fp);
+
+	// int logBuf[logLen];
+	// int logCount = 0;
+
+	// logCount = fread(logBuf, 1, logLen, fp);
+	// if ((logCount = write(cfd, logBuf, logLen)) < 0) {
+	// 	err_exit();
+	// }
 
 	printf("%s\n", buf);
 
