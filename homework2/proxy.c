@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "proxylab-handout/csapp.h"
+#include "csapp.h"
 
 const char program_name[] = "proxy.c"; //global constants are fine, global variables are trouble
 
@@ -25,6 +25,10 @@ void err_exit() { //prints error and exits fuction
  * (sockaddr), the URI from the request (uri), and the size in bytes
  * of the response from the server (size).
  */
+
+//THIS FUNCTION HAS BEEN MODIFIED
+//handles conversion from url to IP address
+//returns the size of the formated log entry in bytes
 int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost, 
 		      char *uri, int size)
 {	
@@ -101,17 +105,20 @@ int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost,
     return sprintf(logstring, "%s: %d.%d.%d.%d %s", time_str, a, b, c, d, uri);
 }
 
-//function that handles client requests
-void clientReq(char* uri, char* url, FILE* logfd, int cfd) {
+//This function handles communication betwee web proxy and web broser
+//takes in the parsed get request that the client uses
+//also takes in the server file descripter to write the web server response back to the browser
+//does not return any values
+void clientReq(char* uri, char* url, char* http, int cfd) {
 	int port = 80; //user defines ports
 
-	int fd = Open_clientfd(url, port); //must now send the get request. write to this file descriptor
+	int fd = 0;
+
+	fd = Open_clientfd(url, port); //must now send the get request. write to this file descriptor
 	int reqLen = 10000;
 	char req[reqLen];
-
-	//char* lhost = "127.0.0.1";
-
-	sprintf(req, "GET %s HTTP/1.1\r\nHost: %s:80\r\n\r\n", uri, url);
+	
+	sprintf(req, "GET %s %s\r\nHost: %s:80\r\n\r\n", uri, http, url);
 
 	printf("%s\n", req);
 
@@ -128,18 +135,14 @@ void clientReq(char* uri, char* url, FILE* logfd, int cfd) {
 	char recvline[MAXLINE + 1];
 	int nr = 0;
 
-	int rnr = 0;
-
 	while ((nr = read(fd, recvline, MAXLINE)) > 0) {
 		recvline[nr] = '\0';	/* null terminate */
 		if (fputs(recvline, stdout) == EOF) {
 			printf("error at line: %i\n", __LINE__);
 			err_exit();
 		}
-		if (( rnr = fwrite(recvline, 1, MAXLINE, logfd)) < 0) {
-			err_exit();
-		}
 		if(send(cfd, recvline, nr+1, MSG_NOSIGNAL) < 0) {
+			printf("Test\n");
 			err_exit();
 		}
 	}
@@ -152,15 +155,16 @@ void clientReq(char* uri, char* url, FILE* logfd, int cfd) {
 }
 
 
-//function for server requests
+//wrapper file for comunication of proxy and browser
+//also handles parsing the get request
+//returns no values
 void reqHandle(int cfd, struct sockaddr_in *addr) {
 
 	char* logFile = "proxy.log"; //stores http info to be passed to web
 
-	FILE* fp = fopen(logFile, "r+");
+	FILE* fp = fopen(logFile, "ab+");
 	if(fp == NULL)
 		err_exit();
-
 	//read request
 
 	char reqbuf[10000];
@@ -168,7 +172,7 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 	if ( (reqlen = read(cfd, reqbuf, sizeof(reqbuf))) < 0)
 		err_exit();
 
-	printf("%s\n", reqbuf);
+	//printf("%s\n", reqbuf);
 
 	//GET pathname HTTP/1.0
 
@@ -176,7 +180,11 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 		//if == 0, then get is found (inverted logic)
 		//NOT a system-level error, so perror does not work here
 		fprintf(stderr, "Not a GET request\n"); //by convention, error messages should be sent to "stderr"
-		exit(2);
+		return;
+	}
+
+	if (strlen(reqbuf) < 5) {
+		return;
 	}
 
 	//dont know length of pathname, need to parse based on a delimiter, in this case " "
@@ -194,11 +202,12 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 
 	char* port = strtok_r(NULL, "\r\n", &s);
 
-	printf("%s %s %s %s %s\n", command, uri, proto, url, port);
+
+	//printf("%s %s %s %s %s\n", command, uri, proto, url, port);
 	
 	//write request
 
-	clientReq(uri, url, fp, cfd);
+	clientReq(uri, url, proto, cfd);
 
 	//open file
 
@@ -207,24 +216,10 @@ void reqHandle(int cfd, struct sockaddr_in *addr) {
 	char buf[10000];
 	int logSize = format_log_entry(buf, addr, url, uri, 0);
 
+	buf[logSize] = '\0';
+
+	fprintf(fp, "%s\n", buf);
 	//the lone carrage return indicates the end of the meta data
-
-	// //write the file recieved to the web client
-	// int logLen = 0;
-	// rewind(fp);
-	// fseek(fp, 0L, SEEK_END);
-	// logLen = ftell(fp);
-	// rewind(fp);
-
-	// int logBuf[logLen];
-	// int logCount = 0;
-
-	// logCount = fread(logBuf, 1, logLen, fp);
-	// if ((logCount = write(cfd, logBuf, logLen)) < 0) {
-	// 	err_exit();
-	// }
-
-	printf("%s\n", buf);
 
 	if (fclose(fp) != 0)
 		err_exit();
