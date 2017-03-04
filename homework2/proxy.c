@@ -1,3 +1,28 @@
+/*	WRITTEN BY: CEDRIC BLAKE
+
+	To begin, this code runs with one arguement, the arguement being the port number. after a port number
+	is passed in, the code proceeds to set up the server side of the proxy. It starts by creating a 
+	socket to be used by the server. We then zero out the server socket object and proceed to bind 
+	the server socket to the IP address and port. After ward we call the listen function to set up the
+	socket to listen on the port and then call accept so the server can begin accepting requests from a cient.
+	once a request has been recieved, the proxy firt tests if the request is a GET request, then it proceeds
+	to parse the request to be used for the cient side of the proxy.
+
+	The client side of the proxy recieves the parsed request and begins to set up a request that will be
+	sent to the web server. This is done by a call to the Open_clientfd() function that calls connect() to the
+	particular url that was passed in. This function returns the file descriptor which the client uses to 
+	send a request to the web server through the write() function call. Once the request has been submitted,
+	the web server sends a response back to the proxy on the file descriptor that was used for the client request,
+	and we proceed to read the response into a buffer. This buffer is then used to write to the server's file 
+	descriptor so that the web client can accept it as a response and load the web site on the browser.
+	Once this process is complete, the web proxy will proceed to call accept again (which is in an infinite while loop)
+	on the server file descriptor so that it may accept another request in the future.
+
+	In addition, this code does log the requests made by the web browser in a file called "proxy.log". The format
+	of the log information is generated using the format_log_entry() function. This function has been modified so that
+	a url, given as a string, can be converted into its corresponiding IP address.
+*/
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <strings.h>
@@ -36,7 +61,6 @@ int format_log_entry(char *logstring, struct sockaddr_in *sockaddr, char* lhost,
     char time_str[MAXLINE];
     unsigned long host;
     unsigned char a, b, c, d;
-    printf("test\n");
     /* Get a formatted time string */
     now = time(NULL);
     strftime(time_str, MAXLINE, "%a %d %b %Y %H:%M:%S %Z", localtime(&now));
@@ -113,11 +137,14 @@ void clientReq(char* uri, char* url, char* http, int cfd) {
 	int port = 80; //user defines ports
 
 	int fd = 0;
-
+	if (strncmp(url, "www", 3) != 0) {
+		return 0;
+	}
+	printf("%s\n", url);
 	fd = Open_clientfd(url, port); //must now send the get request. write to this file descriptor
 	int reqLen = 10000;
 	char req[reqLen];
-	
+
 	sprintf(req, "GET %s %s\r\nHost: %s:80\r\n\r\n", uri, http, url);
 
 	printf("%s\n", req);
@@ -142,12 +169,15 @@ void clientReq(char* uri, char* url, char* http, int cfd) {
 			err_exit();
 		}
 		if(send(cfd, recvline, nr+1, MSG_NOSIGNAL) < 0) {
-			printf("Test\n");
 			err_exit();
 		}
 	}
 	if (nr < 0) {
 		printf("error at line: %i\n", __LINE__);
+		err_exit();
+	}
+
+	if(close(fd) < 0) {
 		err_exit();
 	}
 	
