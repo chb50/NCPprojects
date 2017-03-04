@@ -3,12 +3,13 @@ compiling and running:
 2) run as follows:
 	./proxy <port>
 
+***WHAT I HAVE ACCOMPLISHED***
 
-***THIS CODE IS INCOMPLETE***
+This code can currently load basic html pages. Pages that I am able to successfully upload are:
+		www.gnu.org
+		www.jmarshall.com
 
-I was able to complete steps 1 - 3 of the tips segment of the assignment.
-I have placed both the client and server code in one file (proxy.c).
-However, I am not able to load a website (I still am able to make a request to the web server and store respose in a file (proxy.log)).
-This implementation is iterative.
+However, this code is not able to run with more complex websites, such as www.ucsb.edu. The result of 
+running these sites are partial HTML, but lack of CSS.
 
 NOTE: you must configure your web browser proxy to "localhost" on the port that you want to run this code on
